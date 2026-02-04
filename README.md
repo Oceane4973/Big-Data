@@ -22,8 +22,7 @@ Créer un token pour l'API SNCF au lien suivant : https://numerique.sncf.com/sta
 
 ### 3 . Renseigner les variables d'environement
 
-Ouvrez le fichier .env dans le dossier `/Big-Data` ainsi crée. 
-Spécifiez les valeurs suivantes (Renseigner le token précédemment crée):
+Dans le dossier `/Big-Data` ainsi crée, renommer le fichier `.env-exemple` en `.env`. L'ouvrir et spécifier les valeurs suivantes :
 
 ```bash
 
