@@ -18,6 +18,7 @@ jobs:
         sed -i 's/^AIRFLOW_ADMIN_USERNAME=.*/AIRFLOW_ADMIN_USERNAME=admin/' .env
         sed -i 's/^AIRFLOW_ADMIN_PASSWORD=.*/AIRFLOW_ADMIN_PASSWORD=password/' .env
         sed -i 's/^AIRFLOW_ADMIN_EMAIL=.*/AIRFLOW_ADMIN_EMAIL=admin@email.com/' .env
+        sed -i 's/^AIRFLOW_UID=.*/AIRFLOW_UID=0/' .env
         sed -i 's/^AIRFLOW_POSTGRES_USER=.*/AIRFLOW_POSTGRES_USER=airflow/' .env
         sed -i 's/^AIRFLOW_POSTGRES_PASSWORD=.*/AIRFLOW_POSTGRES_PASSWORD=airflow/' .env
         sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=user/' .env
@@ -39,10 +40,8 @@ jobs:
           
           echo "[$i/24]"
           
-          docker logs airflow-init
           docker logs airflow-webserver
-          docker logs airflow-scheduler
-          
+
           echo "Postgres Airflow: $postgres_airflow_status"
           echo "Airflow init: $airflow_init_status"
           echo "Airflow webserver: $airflow_webserver_status"
