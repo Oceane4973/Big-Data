@@ -28,7 +28,7 @@ jobs:
       run: |
         mkdir -p ./airflow/logs ./airflow/dags ./airflow/plugins
         sudo chown -R 50000:0 ./airflow
-        chmod -R 775 ./airflow
+        sudo chmod -R 775 ./airflow
     
     - name: Start Docker Compose
       run: docker compose up --build -d; docker logs airflow-init
