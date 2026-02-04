@@ -44,9 +44,11 @@ jobs:
           echo "Mongo: $mongo_datalake_status"
           echo "Postgres: $postgres_organized_status"
 
-          if [ "$postgres_airflow_status" = "healthy" ] && [ "$airflow_init_status" = "healthy" ] 
-            && [ "$airflow_webserver_status" = "healthy" ] && [ "$mongo_datalake_status" = "healthy" ] 
-            && [ "$postgres_organized_status" = "healthy" ]; then
+          if [ "$postgres_airflow_status" = "healthy" ] && \
+            [ "$airflow_init_status" = "healthy" ] && \
+            [ "$airflow_webserver_status" = "healthy" ] && \
+            [ "$mongo_datalake_status" = "healthy" ] && \
+            [ "$postgres_organized_status" = "healthy" ]; then
 
             echo "[SUCCESS] ALL SERVICES HEALTHY!"
             exit 0
