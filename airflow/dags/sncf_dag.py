@@ -23,7 +23,7 @@ with DAG(
 
     ingest_task = BashOperator(
         task_id="fetch_sncf_data",
-        bash_command="python ./src/extract.py"
+        bash_command="python /opt/airflow/src/extract.py"
     )
 
     ingest_task

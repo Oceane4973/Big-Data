@@ -1,6 +1,7 @@
 import os
 import requests
 import datetime
+import pytz
 
 from requests.auth import HTTPBasicAuth
 from pymongo import MongoClient
@@ -53,7 +54,7 @@ def save_to_mongo(data):
         print("WARNING: No data")
         return
 
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(pytz.UTC)
     docs = []
 
     for area in disruptions:

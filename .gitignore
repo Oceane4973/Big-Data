@@ -1,5 +1,12 @@
 # Configuration
 .env
 
+# Airflow files
+__pycache__
+
+# Log files
+airflow/logs
+*.log
+
 # Development env
 venv/
