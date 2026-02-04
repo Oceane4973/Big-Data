@@ -9,17 +9,20 @@ from dotenv import load_dotenv
 # Load env variables
 load_dotenv()
 
-
-# Config
+# Get variables from env
 SNCF_TOKEN = os.getenv("SNCF_API_TOKEN")
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
+MONGO_CONTAINER_NAME = os.getenv("MONGO_CONTAINER_NAME")
+
+MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CONTAINER_NAME}:27017/?authSource=admin"
 MONGO_DB = os.getenv("MONGO_DB")
 MONGO_COLLECTION = os.getenv("MONGO_COLLECTION")
 
 BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
 STOP_AREA_MARSEILLE="stop_area:SNCF:87751008"
 
-def fetch_marseille_arrivals():
+def fetch_marseille_disruptions():
     auth = HTTPBasicAuth(SNCF_TOKEN, "")
 
     params = {
@@ -44,16 +47,16 @@ def save_to_mongo(data):
     db = client[MONGO_DB]
     collection = db[MONGO_COLLECTION]
 
-    stop_areas = data.get("stop_areas", [])
+    disruptions = data.get("disruptions", [])
 
-    if not stop_areas:
+    if not disruptions:
         print("WARNING: No data")
         return
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     docs = []
 
-    for area in stop_areas:
+    for area in disruptions:
         area["_ingestion_date"] = now
         area["_source"] = "sncf_api"
 
@@ -68,7 +71,7 @@ def save_to_mongo(data):
 
 def main():
     try:
-        data = fetch_marseille_arrivals()
+        data = fetch_marseille_disruptions()
         save_to_mongo(data)
 
         print("SUCCES: Data saved")
