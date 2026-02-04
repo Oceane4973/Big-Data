@@ -54,7 +54,7 @@ services:
   # =========================
   airflow-init:
     <<: *airflow-common
-    container-name: airflow-init
+    container_name: airflow-init
     command: >
       bash -c "airflow db migrate && \
       airflow users create \
