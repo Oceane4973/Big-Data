@@ -18,8 +18,8 @@ jobs:
         sed -i 's/^AIRFLOW_ADMIN_USERNAME=.*/AIRFLOW_ADMIN_USERNAME=admin/' .env
         sed -i 's/^AIRFLOW_ADMIN_PASSWORD=.*/AIRFLOW_ADMIN_PASSWORD=password/' .env
         sed -i 's/^AIRFLOW_ADMIN_EMAIL=.*/AIRFLOW_ADMIN_EMAIL=admin@email.com/' .env
-        sed -i 's/^AIRFLOW_POSTGRES_USER=.*/AIRFLOW_POSTGRES_USER=user/' .env
-        sed -i 's/^AIRFLOW_POSTGRES_PASSWORD=.*/AIRFLOW_POSTGRES_PASSWORD=password/' .env
+        sed -i 's/^AIRFLOW_POSTGRES_USER=.*/AIRFLOW_POSTGRES_USER=airflow/' .env
+        sed -i 's/^AIRFLOW_POSTGRES_PASSWORD=.*/AIRFLOW_POSTGRES_PASSWORD=airflow/' .env
         sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=user/' .env
         sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=password/' .env
         cat .env
@@ -34,8 +34,10 @@ jobs:
           postgres_airflow_status=$(docker inspect postgres-airflow --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           airflow_init_status=$(docker inspect airflow-init --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           airflow_webserver_status=$(docker inspect airflow-webserver --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          mongo_datalake_tatus=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          mongo_datalake_status=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           postgres_organized_status=$(docker inspect postgres-organized --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          
+          docker logs big-data-airflow-init-1
           
           echo "[$i/24]"
           echo "Postgres Airflow: $postgres_airflow_status"
