@@ -37,9 +37,12 @@ jobs:
           mongo_datalake_status=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           postgres_organized_status=$(docker inspect postgres-organized --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           
-          docker logs big-data-airflow-init-1
-          
           echo "[$i/24]"
+          
+          docker logs airflow-init
+          docker logs airflow-webserver
+          docker logs airflow-scheduler
+          
           echo "Postgres Airflow: $postgres_airflow_status"
           echo "Airflow init: $airflow_init_status"
           echo "Airflow webserver: $airflow_webserver_status"

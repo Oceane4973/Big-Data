@@ -54,6 +54,7 @@ services:
   # =========================
   airflow-init:
     <<: *airflow-common
+    container-name: airflow-init
     command: >
       bash -c "airflow db migrate && \
       airflow users create \
@@ -71,6 +72,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
+    container_name: airflow-webserver
     command: webserver
     ports:
       - "8082:8080"
@@ -85,6 +87,7 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
+    container_name: airflow-scheduler
     command: scheduler
     depends_on:
       airflow-init:
