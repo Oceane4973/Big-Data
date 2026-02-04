@@ -27,7 +27,7 @@ jobs:
     - name: Initialize folder permissions
       run: |
         mkdir -p ./airflow/logs ./airflow/dags ./airflow/plugins
-        chown -R 50000:0 ./airflow
+        sudo chown -R 50000:0 ./airflow
         chmod -R 775 ./airflow
     
     - name: Start Docker Compose
