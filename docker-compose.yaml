@@ -1,21 +1,22 @@
-# version: "3.8"
-
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME}
+  image: apache/airflow:2.7.3
+  env_file:
+    - .env
   environment:
     AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR}
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@${AIRFLOW_POSTGRES_CONTAINER_NAME}/${AIRFLOW_POSTGRES_DB}
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: ${AIRFLOW__CORE__DEFAULT_TIMEZONE}
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
 
-    _PIP_ADDITIONAL_REQUIREMENTS: "requests beautifulsoup4 supabase python-dotenv"
+    _PIP_ADDITIONAL_REQUIREMENTS: "requests pytz pymongo python-dotenv"
 
     PYTHONPATH: /opt/airflow/src
 
-    DB_HOST: postgres
-    DB_NAME: ${POSTGRES_DB}
-    DB_USER: ${POSTGRES_USER}
-    DB_PASSWORD: ${POSTGRES_PASSWORD}
+    DB_HOST: postgres-airflow
+    DB_NAME: ${AIRFLOW_POSTGRES_DB}
+    DB_USER: ${AIRFLOW_POSTGRES_USER}
+    DB_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags
@@ -26,51 +27,58 @@ x-airflow-common: &airflow-common
   user: "${AIRFLOW_UID}:0"
 
   depends_on:
-    postgres:
+    postgres-airflow:
       condition: service_healthy
 
 services:
 
-# ============
-# DATABASE
-# ============
-  postgres:
-    image: postgres:15
-    container_name: postgres
+  # =========================
+  # POSTGRES AIRFLOW
+  # =========================
+  postgres-airflow:
+    image: postgres:13
+    container_name: ${AIRFLOW_POSTGRES_CONTAINER_NAME}
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-airflow-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      test: ["CMD", "pg_isready", "-U", "${AIRFLOW_POSTGRES_USER}", "-d", "${AIRFLOW_POSTGRES_DB}"]
       interval: 5s
       retries: 5
 
-  # ============
+  # =========================
   # AIRFLOW
-  # ============
+  # =========================
   airflow-init:
     <<: *airflow-common
+    container_name: airflow-init
     command: >
       bash -c "airflow db migrate && \
       airflow users create \
-      --username ${AIRFLOW_ADMIN_USER} \
+      --username ${AIRFLOW_ADMIN_USERNAME} \
       --password ${AIRFLOW_ADMIN_PASSWORD} \
       --firstname Admin \
       --lastname User \
-      --role Admin \
+      --role Admin
       --email ${AIRFLOW_ADMIN_EMAIL}"
     restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "echo done"]
+      interval: 5s
+      retries: 1
 
   airflow-webserver:
     <<: *airflow-common
+    container_name: airflow-webserver
     command: webserver
     ports:
       - "8082:8080"
+    depends_on:
+      airflow-init:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -79,39 +87,19 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
+    container_name: airflow-scheduler
     command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_healthy
 
-  # spark-master:
-  #   image: apache/spark:3.5.0
-  #   container_name: spark-master
-  #   command: >
-  #     /opt/spark/bin/spark-class
-  #     org.apache.spark.deploy.master.Master
-  #   ports:
-  #     - "7077:7077"
-  #     - "8080:8080"
-
-  # spark-worker:
-  #   image: apache/spark:3.5.0
-  #   container_name: spark-worker
-  #   depends_on:
-  #     - spark-master
-  #   command: >
-  #     /opt/spark/bin/spark-class
-  #     org.apache.spark.deploy.worker.Worker
-  #     spark://spark-master:7077
-  #   ports:
-  #     - "8081:8081"
-
-  # ============
+  # =========================
   # MONGODB
-  # ============
-  mongo:
+  # =========================
+  mongo-datalake:
     image: mongo:8.0 
-    container_name: mongodb
+    container_name: ${MONGO_CONTAINER_NAME}
     restart: always
-    ports:
-      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
@@ -123,9 +111,61 @@ services:
       interval: 5s
       retries: 5
 
+  # =========================
+  # POSTGRES ORGANIZED
+  # =========================
+  postgres-organized:
+    image: postgres:13
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-organized-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+
+  # # =========================
+  # # LOKI
+  # # =========================
+  # loki:
+  #   image: grafana/loki:2.9.3
+  #   ports:
+  #     - "3100:3100"
+  #   command: -config.file=/etc/loki/local-config.yaml
+
+  # # =========================
+  # # PROMTAIL
+  # # =========================
+  # promtail:
+  #   image: grafana/promtail:2.9.3
+  #   volumes:
+  #     - ./airflow/logs:/var/log/airflow
+  #     - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+  #   command: -config.file=/etc/promtail/config.yml
+  #   depends_on:
+  #     - loki
+
+  # # =========================
+  # # GRAFANA
+  # # =========================
+  # grafana:
+  #   image: grafana/grafana:10.2.3
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - ./monitoring/grafana/data:/var/lib/grafana
+  #   depends_on:
+  #     - loki
+
 volumes:
-  postgres_data:
+  postgres-airflow-data:
   mongo-data:
-    driver: local
   mongo-config:
-    driver: local
+  postgres-organized-data:
