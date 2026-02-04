@@ -31,22 +31,22 @@ jobs:
       run: |
         echo "Waiting for health checks (max 120s)..."
         for i in {1..24}; do
-          postgres-airflow_status=$(docker inspect postgres_airflow --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          airflow-init_status=$(docker inspect airflow-init --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          airflow-webserver_status=$(docker inspect airflow-webserver --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          mongo_status=$(docker inspect mongodb --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          postgres_status=$(docker inspect postgres --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          postgres_airflow_status=$(docker inspect postgres-airflow --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          airflow_init_status=$(docker inspect airflow-init --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          airflow_webserver_status=$(docker inspect airflow-webserver --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          mongo_datalake_tatus=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          postgres_organized_status=$(docker inspect postgres-organized --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           
           echo "[$i/24]"
-          echo "Postgres Airflow: $postgres-airflow_status"
-          echo "Airflow init: $airflow-init_status"
-          echo "Airflow webserver: $airflow-webserver_status"
-          echo "Mongo: $mongo_status"
-          echo "Postgres: $postgres_status"
+          echo "Postgres Airflow: $postgres_airflow_status"
+          echo "Airflow init: $airflow_init_status"
+          echo "Airflow webserver: $airflow_webserver_status"
+          echo "Mongo: $mongo_datalake_status"
+          echo "Postgres: $postgres_organized_status"
 
-          if [ "$postgres-airflow_status" = "healthy" ] && [ "$airflow-init_status" = "healthy" ] 
-            && [ "$airflow-webserver_status" = "healthy" ] && [ "$mongo_status" = "healthy" ] 
-            && [ "$mongo_status" = "healthy" ]; then
+          if [ "$postgres_airflow_status" = "healthy" ] && [ "$airflow_init_status" = "healthy" ] 
+            && [ "$airflow_webserver_status" = "healthy" ] && [ "$mongo_datalake_status" = "healthy" ] 
+            && [ "$postgres_organized_status" = "healthy" ]; then
 
             echo "[SUCCESS] ALL SERVICES HEALTHY!"
             exit 0

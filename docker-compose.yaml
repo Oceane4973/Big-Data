@@ -13,7 +13,7 @@ x-airflow-common: &airflow-common
 
     PYTHONPATH: /opt/airflow/src
 
-    DB_HOST: postgres_airflow
+    DB_HOST: postgres-airflow
     DB_NAME: ${AIRFLOW_POSTGRES_DB}
     DB_USER: ${AIRFLOW_POSTGRES_USER}
     DB_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
@@ -27,7 +27,7 @@ x-airflow-common: &airflow-common
   user: "${AIRFLOW_UID}:0"
 
   depends_on:
-    postgres_airflow:
+    postgres-airflow:
       condition: service_healthy
 
 services:
@@ -43,7 +43,7 @@ services:
       POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
       POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
     volumes:
-      - postgres_airflow_data:/var/lib/postgresql/data
+      - postgres-airflow-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${AIRFLOW_POSTGRES_USER}", "-d", "${AIRFLOW_POSTGRES_DB}"]
       interval: 5s
@@ -93,7 +93,7 @@ services:
   # =========================
   # MONGODB
   # =========================
-  mongo:
+  mongo-datalake:
     image: mongo:8.0 
     container_name: ${MONGO_CONTAINER_NAME}
     restart: always
@@ -119,7 +119,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_organized_data:/var/lib/postgresql/data
+      - postgres-organized-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
       interval: 5s
@@ -162,7 +162,7 @@ services:
   #     - loki
 
 volumes:
-  postgres_airflow_data:
+  postgres-airflow-data:
   mongo-data:
   mongo-config:
-  postgres_organized_data:
+  postgres-organized-data:
