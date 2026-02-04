@@ -18,15 +18,20 @@ jobs:
         sed -i 's/^AIRFLOW_ADMIN_USERNAME=.*/AIRFLOW_ADMIN_USERNAME=admin/' .env
         sed -i 's/^AIRFLOW_ADMIN_PASSWORD=.*/AIRFLOW_ADMIN_PASSWORD=password/' .env
         sed -i 's/^AIRFLOW_ADMIN_EMAIL=.*/AIRFLOW_ADMIN_EMAIL=admin@email.com/' .env
-        sed -i 's/^AIRFLOW_UID=.*/AIRFLOW_UID=0/' .env
         sed -i 's/^AIRFLOW_POSTGRES_USER=.*/AIRFLOW_POSTGRES_USER=airflow/' .env
         sed -i 's/^AIRFLOW_POSTGRES_PASSWORD=.*/AIRFLOW_POSTGRES_PASSWORD=airflow/' .env
         sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=user/' .env
         sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=password/' .env
         cat .env
+
+    - name: Initialize folder permissions
+      run: |
+        mkdir -p ./airflow/logs ./airflow/dags ./airflow/plugins
+        chown -R 50000:0 ./airflow
+        chmod -R 775 ./airflow
     
     - name: Start Docker Compose
-      run: docker compose up --build -d
+      run: docker compose up --build -d; docker logs airflow-init
     
     - name: Wait for healthy services
       run: |
