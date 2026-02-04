@@ -1,0 +1,50 @@
+name: Docker Compose Health Check
+
+on: [push, pull_request]
+
+jobs:
+  test-infrastructure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Generate .env from .env-example
+      run: |
+        cp .env-example .env
+        sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=mydb/' .env
+        sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=admin/' .env
+        sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=supersecret123/' .env
+        sed -i 's/^MONGO_USER=.*/MONGO_USER=admin/' .env
+        sed -i 's/^MONGO_PASSWORD=.*/MONGO_PASSWORD=mongosecret2026/' .env
+        cat .env
+    
+    - name: Start Docker Compose
+      run: docker compose up --build -d
+    
+    - name: Wait for healthy services
+      run: |
+        echo "⏳ Waiting for health checks (max 120s)..."
+        for i in {1..24}; do
+          postgres_status=$(docker inspect postgres --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          mongo_status=$(docker inspect mongodb --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          
+          echo "[$i/24] Postgres: $postgres_status | MongoDB: $mongo_status"
+          
+          if [ "$postgres_status" = "healthy" ] && [ "$mongo_status" = "healthy" ]; then
+            echo "[SUCCESS] ALL SERVICES HEALTHY!"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "[ERROR] TIMEOUT - Services not healthy"
+        docker ps -a
+        exit 1
+    
+    - name: Run tests
+      run: echo "[INFO] Infrastructure ready for tests!"
+    
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v
