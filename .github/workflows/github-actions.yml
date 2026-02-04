@@ -21,7 +21,7 @@ jobs:
         cat .env
     
     - name: Start Docker Compose
-      run: docker-compose up --build -d
+      run: docker compose up --build -d
     
     - name: Wait for healthy services
       run: |
@@ -47,4 +47,4 @@ jobs:
     
     - name: Cleanup
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v
