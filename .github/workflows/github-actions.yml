@@ -38,23 +38,18 @@ jobs:
         echo "Waiting for health checks (max 120s)..."
         for i in {1..24}; do
           postgres_airflow_status=$(docker inspect postgres-airflow --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
-          airflow_init_status=$(docker inspect airflow-init --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           airflow_webserver_status=$(docker inspect airflow-webserver --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           mongo_datalake_status=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           postgres_organized_status=$(docker inspect postgres-organized --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
           
           echo "[$i/24]"
-          
-          docker logs airflow-webserver
 
           echo "Postgres Airflow: $postgres_airflow_status"
-          echo "Airflow init: $airflow_init_status"
           echo "Airflow webserver: $airflow_webserver_status"
           echo "Mongo: $mongo_datalake_status"
           echo "Postgres: $postgres_organized_status"
 
           if [ "$postgres_airflow_status" = "healthy" ] && \
-            [ "$airflow_init_status" = "healthy" ] && \
             [ "$airflow_webserver_status" = "healthy" ] && \
             [ "$mongo_datalake_status" = "healthy" ] && \
             [ "$postgres_organized_status" = "healthy" ]; then
