@@ -1,52 +1,64 @@
 version: "3.8"
 
 services:
+
+  # =========================
+  # POSTGRES
+  # =========================
   postgres:
     image: postgres:15
     container_name: postgres
     environment:
-      POSTGRES_DB: sparkdb
-      POSTGRES_USER: spark
-      POSTGRES_PASSWORD: spark
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
 
-  spark-master:
-    image: apache/spark:3.5.0
-    container_name: spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.master.Master
-    ports:
-      - "7077:7077"
-      - "8080:8080"
+  # spark-master:
+  #   image: apache/spark:3.5.0
+  #   container_name: spark-master
+  #   command: >
+  #     /opt/spark/bin/spark-class
+  #     org.apache.spark.deploy.master.Master
+  #   ports:
+  #     - "7077:7077"
+  #     - "8080:8080"
 
-  spark-worker:
-    image: apache/spark:3.5.0
-    container_name: spark-worker
-    depends_on:
-      - spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.worker.Worker
-      spark://spark-master:7077
-    ports:
-      - "8081:8081"
+  # spark-worker:
+  #   image: apache/spark:3.5.0
+  #   container_name: spark-worker
+  #   depends_on:
+  #     - spark-master
+  #   command: >
+  #     /opt/spark/bin/spark-class
+  #     org.apache.spark.deploy.worker.Worker
+  #     spark://spark-master:7077
+  #   ports:
+  #     - "8081:8081"
     
   mongo:
     image: mongo:8.0 
     container_name: mongodb
     restart: always
     ports:
-      - "27017:27017" # Expose MongoDB on the default port
+      - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root # Set the admin username
-      MONGO_INITDB_ROOT_PASSWORD: password # Set the admin password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
-      - mongo-data:/data/db # Persist MongoDB data
-      - mongo-config:/data/configdb # Persist MongoDB configuration
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --username $${MONGO_USER} --password $${MONGO_PASSWORD} --authenticationDatabase admin --quiet || exit 1"]
+      interval: 5s
+      retries: 5
 
 volumes:
   postgres_data:
