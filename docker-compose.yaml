@@ -8,15 +8,8 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DEFAULT_TIMEZONE: ${AIRFLOW__CORE__DEFAULT_TIMEZONE}
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
-
     _PIP_ADDITIONAL_REQUIREMENTS: "requests pytz pymongo python-dotenv"
-
     PYTHONPATH: /opt/airflow/src
-
-    DB_HOST: postgres-airflow
-    DB_NAME: ${AIRFLOW_POSTGRES_DB}
-    DB_USER: ${AIRFLOW_POSTGRES_USER}
-    DB_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags
@@ -42,6 +35,8 @@ services:
       POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
       POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
       POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
+    ports:
+      - "${AIRFLOW_POSTGRES_CONTAINER_PORT}:5432"
     volumes:
       - postgres-airflow-data:/var/lib/postgresql/data
     healthcheck:
@@ -49,12 +44,22 @@ services:
       interval: 5s
       retries: 5
 
+  postgres-airflow-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-airflow-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@${AIRFLOW_POSTGRES_CONTAINER_NAME}:5432/${AIRFLOW_POSTGRES_DB}?sslmode=disable"
+    restart: unless-stopped
+    depends_on:
+      postgres-airflow:
+        condition: service_healthy
+
   # =========================
   # AIRFLOW
   # =========================
   airflow-init:
     <<: *airflow-common
-    container_name: airflow-init
+    container_name: ${AIRFLOW_INIT_CONTAINER_NAME}
     command: >
       bash -c "airflow db migrate && \
       airflow users create \
@@ -72,10 +77,10 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
-    container_name: airflow-webserver
+    container_name: ${AIRFLOW_WEBSERVER_CONTAINER_NAME}
     command: webserver
     ports:
-      - "8082:8080"
+      - "${AIRFLOW_WEBSERVER_CONTAINER_PORT}:8080"
     depends_on:
       airflow-init:
         condition: service_healthy
@@ -85,12 +90,27 @@ services:
       timeout: 10s
       retries: 5
 
+  airflow-webserver-exporter:
+    image: pbweb/airflow-prometheus-exporter
+    container_name: airflow-webserver-exporter
+    environment:
+      AIRFLOW_PROMETHEUS_DATABASE_BACKEND: postgres
+      AIRFLOW_PROMETHEUS_DATABASE_HOST: ${AIRFLOW_POSTGRES_CONTAINER_NAME}
+      AIRFLOW_PROMETHEUS_DATABASE_PORT: 5432
+      AIRFLOW_PROMETHEUS_DATABASE_USER: ${AIRFLOW_POSTGRES_USER}
+      AIRFLOW_PROMETHEUS_DATABASE_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+      AIRFLOW_PROMETHEUS_DATABASE_NAME: ${AIRFLOW_POSTGRES_DB}
+    restart: unless-stopped
+    depends_on:
+      postgres-airflow:
+        condition: service_healthy
+
   airflow-scheduler:
     <<: *airflow-common
-    container_name: airflow-scheduler
+    container_name: ${AIRFLOW_SCHEDULER_CONTAINER_NAME}
     command: scheduler
     depends_on:
-      airflow-init:
+      airflow-webserver:
         condition: service_healthy
 
   # =========================
@@ -99,10 +119,12 @@ services:
   mongo-datalake:
     image: mongo:8.0 
     container_name: ${MONGO_CONTAINER_NAME}
-    restart: always
+    restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - "${MONGO_CONTAINER_PORT}:27017"
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
@@ -110,6 +132,16 @@ services:
       test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --username $${MONGO_USER} --password $${MONGO_PASSWORD} --authenticationDatabase admin --quiet || exit 1"]
       interval: 5s
       retries: 5
+
+  mongo-datalake-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: mongo-datalake-exporter
+    command:
+      - "--mongodb.uri=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_CONTAINER_NAME}:27017/admin"
+    restart: unless-stopped
+    depends_on:
+      mongo-datalake:
+        condition: service_healthy
 
   # =========================
   # POSTGRES ORGANIZED
@@ -121,6 +153,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_CONTAINER_PORT}:5432"
     volumes:
       - postgres-organized-data:/var/lib/postgresql/data
     healthcheck:
@@ -128,44 +162,107 @@ services:
       interval: 5s
       retries: 5
 
-  # # =========================
-  # # LOKI
-  # # =========================
-  # loki:
-  #   image: grafana/loki:2.9.3
-  #   ports:
-  #     - "3100:3100"
-  #   command: -config.file=/etc/loki/local-config.yaml
+  postgres-organized-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-organized-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_CONTAINER_NAME}:5432/${POSTGRES_DB}?sslmode=disable"
+    restart: unless-stopped
+    depends_on:
+      postgres-organized:
+        condition: service_healthy
 
-  # # =========================
-  # # PROMTAIL
-  # # =========================
-  # promtail:
-  #   image: grafana/promtail:2.9.3
-  #   volumes:
-  #     - ./airflow/logs:/var/log/airflow
-  #     - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
-  #   command: -config.file=/etc/promtail/config.yml
-  #   depends_on:
-  #     - loki
-
-  # # =========================
-  # # GRAFANA
-  # # =========================
-  # grafana:
-  #   image: grafana/grafana:10.2.3
+  ########################
+  # KAFKA (KRaft mode)
+  ########################
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.5.0
+  #   container_name: kafka
   #   ports:
-  #     - "3000:3000"
+  #     - "9092:9092"
   #   environment:
-  #     - GF_SECURITY_ADMIN_USER=admin
-  #     - GF_SECURITY_ADMIN_PASSWORD=admin
-  #   volumes:
-  #     - ./monitoring/grafana/data:/var/lib/grafana
-  #   depends_on:
-  #     - loki
+  #     CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+  #     KAFKA_NODE_ID: 1
+  #     KAFKA_PROCESS_ROLES: "broker,controller"
+
+  #     KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+  #     KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  ########################
+  # SPARK MASTER
+  ########################
+  spark-master:
+    image: apache/spark:4.0.1-python3
+    container_name: ${SPARK_MASTER_CONTAINER_NAME}
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+    ports:
+      - "${SPARK_MASTER_PROTOCOL_CONTAINER_PORT}:7077"
+      - "${SPARK_MASTER_WEB_CONTAINER_PORT}:8080"
+    volumes:
+      - ./spark/jobs:/opt/spark/jobs
+    restart: unless-stopped
+
+  ########################
+  # SPARK WORKER
+  ########################
+  spark-worker:
+    image: apache/spark:4.0.1-python3
+    container_name: ${SPARK_WORKER_CONTAINER_NAME}
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://${SPARK_MASTER_CONTAINER_NAME}:7077
+    volumes:
+      - ./spark/jobs:/opt/spark/jobs
+    restart: unless-stopped
+    depends_on:
+      - spark-master
+
+  ########################
+  # LOCAL MONITORING
+  ########################
+  node-exporter:
+    image: prom/node-exporter
+
+  ########################
+  # PROMETHEUS
+  ########################
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ${PROMETHEUS_CONTAINER_NAME}
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "${PROMETHEUS_CONTAINER_PORT}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  ########################
+  # GRAFANA
+  ########################
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: ${GRAFANA_CONTAINER_NAME}
+    ports:
+      - "${GRAFANA_CONTAINER_PORT}:3000"
+    restart: unless-stopped
 
 volumes:
   postgres-airflow-data:
   mongo-data:
   mongo-config:
   postgres-organized-data:
+  prometheus-data:

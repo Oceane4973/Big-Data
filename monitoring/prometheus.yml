@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s       # Fréquence de collecte
+  evaluation_interval: 15s   # Fréquence d'évaluation des règles
+
+scrape_configs:
+  # =========================
+  # PROMETHEUS LUI-MÊME
+  # =========================
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # =========================
+  # POSTGRES AIRFLOW
+  # =========================
+  - job_name: "postgres-airflow"
+    static_configs:
+      - targets: ["postgres-airflow-exporter:9187"]
+
+  # =========================
+  # AIRFLOW (via exporter)
+  # =========================
+  - job_name: "airflow"
+    static_configs:
+      - targets: ["airflow-webserver-exporter:9112"]
+
+  # =========================
+  # MONGODB
+  # =========================
+  - job_name: "mongo"
+    static_configs:
+      - targets: ["mongo-datalake-exporter:9216"]
+
+  # =========================
+  # POSTGRES ORGANIZED
+  # =========================
+  - job_name: "postgres-organized"
+    static_configs:
+      - targets: ["postgres-organized-exporter:9187"]
+
+  # =========================
+  # DOCKER / NODE EXPORTER
+  # =========================
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
