@@ -6,6 +6,7 @@ __pycache__
 
 # Log files
 airflow/logs
+spark/logs
 *.log
 
 # Development env

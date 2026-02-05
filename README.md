@@ -30,3 +30,4 @@ Dans le dossier `/Big-Data` ainsi crée, renommer le fichier `.env-exemple` en `
 
 ```
 
+> En fonction de la qualité du réseau, il peut être nécessaire d'attendre au moins 10 minutes pour le lancement du airflow-webserver
