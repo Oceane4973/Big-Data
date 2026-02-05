@@ -1,0 +1,71 @@
+name: Docker Compose Health Check
+
+on: [push, pull_request]
+
+jobs:
+  test-infrastructure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Generate .env from .env-example
+      run: |
+        cp .env-example .env
+        sed -i 's/^MONGO_USER=.*/MONGO_USER=admin/' .env
+        sed -i 's/^MONGO_PASSWORD=.*/MONGO_PASSWORD=password/' .env
+        sed -i 's/^AIRFLOW_ADMIN_USERNAME=.*/AIRFLOW_ADMIN_USERNAME=admin/' .env
+        sed -i 's/^AIRFLOW_ADMIN_PASSWORD=.*/AIRFLOW_ADMIN_PASSWORD=password/' .env
+        sed -i 's/^AIRFLOW_ADMIN_EMAIL=.*/AIRFLOW_ADMIN_EMAIL=admin@email.com/' .env
+        sed -i 's/^AIRFLOW_POSTGRES_USER=.*/AIRFLOW_POSTGRES_USER=airflow/' .env
+        sed -i 's/^AIRFLOW_POSTGRES_PASSWORD=.*/AIRFLOW_POSTGRES_PASSWORD=airflow/' .env
+        sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=user/' .env
+        sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=password/' .env
+        cat .env
+
+    - name: Initialize folder permissions
+      run: |
+        mkdir -p ./airflow/logs ./airflow/dags ./airflow/plugins
+        sudo chown -R 50000:0 ./airflow
+        sudo chmod -R 775 ./airflow
+    
+    - name: Start Docker Compose
+      run: docker compose up --build -d; docker logs airflow-init
+    
+    - name: Wait for healthy services
+      run: |
+        echo "Waiting for health checks (max 120s)..."
+        for i in {1..24}; do
+          postgres_airflow_status=$(docker inspect postgres-airflow --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          airflow_webserver_status=$(docker inspect airflow-webserver --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          mongo_datalake_status=$(docker inspect mongo-datalake --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          postgres_organized_status=$(docker inspect postgres-organized --format='{{.State.Health.Status}}' 2>/dev/null || echo "unhealthy")
+          
+          echo "[$i/24]"
+
+          echo "Postgres Airflow: $postgres_airflow_status"
+          echo "Airflow webserver: $airflow_webserver_status"
+          echo "Mongo: $mongo_datalake_status"
+          echo "Postgres: $postgres_organized_status"
+
+          if [ "$postgres_airflow_status" = "healthy" ] && \
+            [ "$airflow_webserver_status" = "healthy" ] && \
+            [ "$mongo_datalake_status" = "healthy" ] && \
+            [ "$postgres_organized_status" = "healthy" ]; then
+
+            echo "[SUCCESS] ALL SERVICES HEALTHY!"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "[ERROR] TIMEOUT - Services not healthy"
+        docker ps -a
+        exit 1
+    
+    - name: Run tests
+      run: echo "[INFO] Infrastructure ready for tests!"
+    
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v
