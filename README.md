@@ -35,6 +35,9 @@ Pour faire fonctionner ce projet, suivre ces étapes :
     - `POSTGRES_PASSWORD` : Le mot de passe de l'utilisateur de la base de données *Postrges*
 - [ ] Ouvrir un terminal à la racine du projet
 - [ ] Démarrer les conteneurs avec la commande `docker compose up -d --build`
+- [ ] Se rendre sur l'interface *Airflow*
+    - Si vous n'avez pas modifié les variables d'environneemnt associées : http://localhost:8082
+- [ ] Activer le DAG `big_data_tp_workflow`
 - [ ] Visiter les tableaux de bord *Grafana*
 
 > [!NOTE]
@@ -104,6 +107,10 @@ Le projet est structuré de la manière suivante :
 - `.env-example` : Un fichier exemple pour la configuration de l'environnement
 - `docker-compose.yml` : La configuration de nos conteneurs
 - `README.md` : La documentation du projet
+
+### Projet archive interruptions
+
+## Tableaux de bord *Grafana*
 
 ---
 
