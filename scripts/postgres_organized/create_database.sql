@@ -1,4 +1,4 @@
-CREATE TABLE marseille_arrivals (
+CREATE TABLE IF NOT EXISTS marseille_arrivals (
     train_id TEXT PRIMARY KEY,
     departure_scheduled TIMESTAMPTZ,
     departure_actual TIMESTAMPTZ,
