@@ -1,5 +1,5 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.7.3
+  image: apache/airflow:2.11.0
   env_file:
     - .env
   environment:
@@ -8,14 +8,19 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DEFAULT_TIMEZONE: ${AIRFLOW__CORE__DEFAULT_TIMEZONE}
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
-    _PIP_ADDITIONAL_REQUIREMENTS: "requests pytz pymongo python-dotenv"
+    _PIP_ADDITIONAL_REQUIREMENTS: > 
+      requests
+      pytz
+      pymongo
+      python-dotenv
     PYTHONPATH: /opt/airflow/src
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
-    - ./src:/opt/airflow/src
+    - ./scripts/airflow:/opt/airflow/src
+    - /var/run/docker.sock:/var/run/docker.sock
 
   user: "${AIRFLOW_UID}:0"
 
@@ -70,6 +75,11 @@ services:
       --role Admin
       --email ${AIRFLOW_ADMIN_EMAIL}"
     restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "airflow db check"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   airflow-webserver:
     <<: *airflow-common
@@ -79,7 +89,7 @@ services:
       - "${AIRFLOW_WEBSERVER_CONTAINER_PORT}:8080"
     depends_on:
       airflow-init:
-        condition: service_completed_successfully
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -107,7 +117,7 @@ services:
     command: scheduler
     depends_on:
       airflow-init:
-        condition: service_completed_successfully
+        condition: service_healthy
 
   # =========================
   # MONGODB
@@ -152,6 +162,7 @@ services:
     ports:
       - "${POSTGRES_CONTAINER_PORT}:5432"
     volumes:
+      - ./scripts/postgres_organized:/docker-entrypoint-initdb.d:ro
       - postgres-organized-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
@@ -197,6 +208,8 @@ services:
   spark-master:
     image: apache/spark:4.0.1-python3
     container_name: ${SPARK_MASTER_CONTAINER_NAME}
+    env_file:
+      - .env
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.master.Master
@@ -205,6 +218,7 @@ services:
       - "${SPARK_MASTER_WEB_CONTAINER_PORT}:8080"
     volumes:
       - ./spark/jobs:/opt/spark/jobs
+      - ./spark/logs:/opt/spark/logs
     restart: unless-stopped
 
   ########################
@@ -213,6 +227,8 @@ services:
   spark-worker:
     image: apache/spark:4.0.1-python3
     container_name: ${SPARK_WORKER_CONTAINER_NAME}
+    env_file:
+      - .env
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.worker.Worker
