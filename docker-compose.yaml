@@ -164,7 +164,6 @@ services:
     volumes:
       - ./scripts/postgres_organized:/docker-entrypoint-initdb.d:ro
       - postgres-organized-data:/var/lib/postgresql/data
-      - ./scripts_sql/disruptions.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
       interval: 5s
