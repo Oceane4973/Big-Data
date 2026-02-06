@@ -43,7 +43,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_SNFC_ORGANIZED_DATA}"
+        "uid": "${DS_SNCF_ORGANIZED_DATA}"
       },
       "fieldConfig": {
         "defaults": {
@@ -78,12 +78,12 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_SNFC_ORGANIZED_DATA}" },
+          "datasource": { "type": "postgres", "uid": "${DS_SNCF_ORGANIZED_DATA}" },
           "editorMode": "builder",
           "format": "table",
-          "rawSql": "SELECT COUNT(*) AS total_perturbations FROM perturbations LIMIT 50",
+          "rawSql": "SELECT * FROM marseille_arrivals LIMIT 50",
           "refId": "A",
-          "table": "perturbations"
+          "table": "marseille_arrivals"
         }
       ],
       "title": "Nombre de perturbations",
