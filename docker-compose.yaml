@@ -19,7 +19,7 @@ x-airflow-common: &airflow-common
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
-    - ./src:/opt/airflow/src
+    - ./scripts/airflow:/opt/airflow/src
     - /var/run/docker.sock:/var/run/docker.sock
 
   user: "${AIRFLOW_UID}:0"
@@ -162,6 +162,7 @@ services:
     ports:
       - "${POSTGRES_CONTAINER_PORT}:5432"
     volumes:
+      - ./scripts/postgres_organized:/docker-entrypoint-initdb.d:ro
       - postgres-organized-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
@@ -207,6 +208,8 @@ services:
   spark-master:
     image: apache/spark:4.0.1-python3
     container_name: ${SPARK_MASTER_CONTAINER_NAME}
+    env_file:
+      - .env
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.master.Master
@@ -215,6 +218,7 @@ services:
       - "${SPARK_MASTER_WEB_CONTAINER_PORT}:8080"
     volumes:
       - ./spark/jobs:/opt/spark/jobs
+      - ./spark/drivers/postgresql-42.7.9.jar:/opt/spark/jars/postgresql.jar:ro
       - ./spark/logs:/opt/spark/logs
     restart: unless-stopped
 
@@ -224,12 +228,15 @@ services:
   spark-worker:
     image: apache/spark:4.0.1-python3
     container_name: ${SPARK_WORKER_CONTAINER_NAME}
+    env_file:
+      - .env
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.worker.Worker
       spark://${SPARK_MASTER_CONTAINER_NAME}:7077
     volumes:
       - ./spark/jobs:/opt/spark/jobs
+      - ./spark/drivers/postgresql-42.7.9.jar:/opt/spark/jars/postgresql.jar:ro
     restart: unless-stopped
     depends_on:
       - spark-master
