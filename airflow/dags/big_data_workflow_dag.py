@@ -32,7 +32,7 @@ with DAG(
             "docker exec spark-master "
             "/opt/spark/bin/spark-submit "
             f"--master spark://{SPARK_MASTER_HOST}:7077 "
-            "--packages org.mongodb.spark:mongo-spark-connector_2.13:11.0.0 "
+            "--packages org.mongodb.spark:mongo-spark-connector_2.13:11.0.0,org.postgresql:postgresql:42.7.9 "
             "--conf spark.jars.ivy=/opt/spark/ "
             "/opt/spark/jobs/preprocess.py"
         ),

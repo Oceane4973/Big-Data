@@ -218,7 +218,6 @@ services:
       - "${SPARK_MASTER_WEB_CONTAINER_PORT}:8080"
     volumes:
       - ./spark/jobs:/opt/spark/jobs
-      - ./spark/drivers/postgresql-42.7.9.jar:/opt/spark/jars/postgresql.jar:ro
       - ./spark/logs:/opt/spark/logs
     restart: unless-stopped
 
@@ -236,7 +235,6 @@ services:
       spark://${SPARK_MASTER_CONTAINER_NAME}:7077
     volumes:
       - ./spark/jobs:/opt/spark/jobs
-      - ./spark/drivers/postgresql-42.7.9.jar:/opt/spark/jars/postgresql.jar:ro
     restart: unless-stopped
     depends_on:
       - spark-master
