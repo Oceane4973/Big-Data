@@ -34,10 +34,10 @@ if arrivals_raw.rdd.isEmpty():
 # Select formatted data for Postgres
 arrivals_final = arrivals_raw.select(
     col("_id").alias("train_id"),
-    to_timestamp(col("stop_date_time").getField("departure_date_time"), "yyyyMMdd'T'HHmmss").alias("departure_scheduled"),
-    to_timestamp(col("stop_date_time").getField("base_departure_date_time"), "yyyyMMdd'T'HHmmss").alias("departure_actual"),
-    to_timestamp(col("stop_date_time").getField("arrival_date_time"), "yyyyMMdd'T'HHmmss").alias("arrival_scheduled"),
-    to_timestamp(col("stop_date_time").getField("base_arrival_date_time"), "yyyyMMdd'T'HHmmss").alias("arrival_actual"),
+    to_timestamp(col("stop_date_time").getField("departure_date_time"), "yyyyMMdd'T'HHmmss").alias("departure_actual"),
+    to_timestamp(col("stop_date_time").getField("base_departure_date_time"), "yyyyMMdd'T'HHmmss").alias("departure_scheduled"),
+    to_timestamp(col("stop_date_time").getField("arrival_date_time"), "yyyyMMdd'T'HHmmss").alias("arrival_actual"),
+    to_timestamp(col("stop_date_time").getField("base_arrival_date_time"), "yyyyMMdd'T'HHmmss").alias("arrival_scheduled"),
     col("stop_point").getField("name").alias("stop_name"),
     col("stop_point").getField("physical_modes").getItem(0).getField("name").alias("train_type"),
     col("display_informations").getField("name").alias("train_name"),
