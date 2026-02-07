@@ -309,7 +309,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Airflow - DAGs & Scheduler",
+  "title": "Airflow & DAGs",
   "uid": "airflow",
   "version": 3,
   "weekStart": ""
