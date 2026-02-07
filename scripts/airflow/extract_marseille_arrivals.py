@@ -4,7 +4,7 @@ import datetime
 import pytz
 
 from requests.auth import HTTPBasicAuth
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from dotenv import load_dotenv
 
 # Load env variables
@@ -23,11 +23,11 @@ MONGO_COLLECTION = os.getenv("MONGO_COLLECTION")
 BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
 STOP_AREA_MARSEILLE="stop_area:SNCF:87751008"
 
-def fetch_marseille_disruptions():
+def fetch_marseille_arrivals():
     auth = HTTPBasicAuth(SNCF_TOKEN, "")
 
     params = {
-        "count": 1000
+        "count": 100
     }
 
     response = requests.get(
@@ -44,35 +44,54 @@ def fetch_marseille_disruptions():
 
 def save_to_mongo(data):
     client = MongoClient(MONGO_URI)
-
     db = client[MONGO_DB]
     collection = db[MONGO_COLLECTION]
 
-    disruptions = data.get("disruptions", [])
+    arrivals = data.get("arrivals", [])
 
-    if not disruptions:
-        print("WARNING: No data")
+    if not arrivals:
+        print("WARNING: No data arrivals")
         return
 
     now = datetime.datetime.now(pytz.UTC)
-    docs = []
+    operations = []
 
-    for area in disruptions:
+    for area in arrivals:
+        # Search vehicule journey ID
+        vj_link = next(
+            (l for l in area.get("links", []) if l.get("type") == "vehicle_journey"),
+            None
+        )
+
+        if not vj_link:
+            continue
+
+        area["_id"] = vj_link["id"]
         area["_ingestion_date"] = now
+        area["_preprocessed"] = False
         area["_source"] = "sncf_api"
 
-        docs.append(area)
+        operations.append(
+            UpdateOne(
+                {"_id": vj_link["id"]},
+                {"$setOnInsert": area},
+                upsert=True
+            )
+        )
 
-    # Insertion bulk
-    result = collection.insert_many(docs)
-    print(f"{len(result.inserted_ids)} documents insérés")
+    if operations:
+        result = collection.bulk_write(operations, ordered=False)
+        print(
+            f"Inserted: {result.upserted_count}, "
+            f"Matched existing: {result.matched_count}"
+        )
 
     client.close()
 
 
 def main():
     try:
-        data = fetch_marseille_disruptions()
+        data = fetch_marseille_arrivals()
         save_to_mongo(data)
 
         print("SUCCES: Data saved")
