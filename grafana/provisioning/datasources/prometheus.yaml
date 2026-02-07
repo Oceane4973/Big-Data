@@ -4,7 +4,7 @@ datasources:
   - name: prometheus
     type: prometheus
     access: proxy
-    url: ${PROMETHEUS_CONTAINER_NAME}:${PROMETHEUS_CONTAINER_PORT}
+    url: http://${PROMETHEUS_CONTAINER_NAME}:${PROMETHEUS_CONTAINER_PORT}
     isDefault: false
     editable: true
     jsonData:

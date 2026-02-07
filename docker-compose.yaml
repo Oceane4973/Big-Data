@@ -277,12 +277,16 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_CONTAINER_NAME: ${POSTGRES_CONTAINER_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_CONTAINER_PORT: ${POSTGRES_CONTAINER_PORT}
       PROMETHEUS_CONTAINER_NAME: ${PROMETHEUS_CONTAINER_NAME}
       PROMETHEUS_CONTAINER_PORT: ${PROMETHEUS_CONTAINER_PORT}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
 
 
 volumes:

@@ -4,9 +4,11 @@ datasources:
   - name: sncf_organized_data
     type: postgres
     url: ${POSTGRES_CONTAINER_NAME}:5432
-    database: ${POSTGRES_DB}
-    user: grafana_user
-    password: grafana_password_123
+    user: ${POSTGRES_USER}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
     isDefault: true
     jsonData:
+      database: ${POSTGRES_DB}
       sslmode: "disable"
+      postgresVersion: 1300
